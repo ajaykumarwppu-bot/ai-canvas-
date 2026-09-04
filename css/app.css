@@ -1,12 +1,19 @@
-/* css/app.css - Main application styles */
+/* ============================================
+   css/app.css - Main application shell styles
+   ============================================ */
 
-/* Reset and base */
+/* --------------------------------------------
+   Reset
+   -------------------------------------------- */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* --------------------------------------------
+   Root
+   -------------------------------------------- */
 html, body {
     width: 100%;
     height: 100%;
@@ -17,7 +24,9 @@ html, body {
     color: #ffffff;
 }
 
-/* Main application root */
+/* --------------------------------------------
+   Application Shell
+   -------------------------------------------- */
 #app-root {
     width: 100%;
     height: 100%;
@@ -25,7 +34,9 @@ html, body {
     flex-direction: column;
 }
 
-/* Top application bar */
+/* --------------------------------------------
+   Header
+   -------------------------------------------- */
 #app-top-bar {
     display: flex;
     justify-content: space-between;
@@ -49,21 +60,29 @@ html, body {
     color: #888;
 }
 
-/* Main workspace area */
+/* --------------------------------------------
+   Workspace
+   -------------------------------------------- */
 #app-workspace {
     flex: 1;
     position: relative;
     overflow: hidden;
 }
 
-/* Canvas container inside workspace */
 #canvas-container {
     width: 100%;
     height: 100%;
     position: relative;
 }
 
-/* Future-ready panels (placeholder for Stage 2+) */
+/* --------------------------------------------
+   Status
+   -------------------------------------------- */
+/* Status styling handled in Header section */
+
+/* --------------------------------------------
+   Future Panels (Stage 2+)
+   -------------------------------------------- */
 #app-left-panel,
 #app-right-panel {
     position: absolute;
@@ -86,7 +105,9 @@ html, body {
     border-left: 1px solid #333;
 }
 
-/* Responsive adjustments for smaller screens */
+/* --------------------------------------------
+   Responsive
+   -------------------------------------------- */
 @media (max-width: 768px) {
     #app-top-bar {
         height: 40px;
