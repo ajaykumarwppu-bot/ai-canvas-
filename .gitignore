@@ -1,8 +1,1 @@
-(js/ai.schema.js - this appears to be a JavaScript source file, which should not be ignored
-index.html - this is an HTML source file, which should not be ignored
-
-Since only source files (.js and .html) were added/modified and no build artifacts, dependencies, or temporary files were detected, no .gitignore rules are needed.)
-
-```javascript
-
-```
+(js/ai.actions.js is a source file, index.html is a source/config file - both are legitimate project files that should not be ignored)
