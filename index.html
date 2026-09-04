@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas AI Prototype</title>
+    
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/canvas.css">
+</head>
+<body>
+    <!-- Main application root -->
+    <div id="app-root">
+        
+        <!-- Top application bar -->
+        <header id="app-top-bar">
+            <div id="app-title">Canvas AI Prototype</div>
+            <div id="app-status">Ready</div>
+        </header>
+        
+        <!-- Main workspace area -->
+        <main id="app-workspace">
+            
+            <!-- Canvas container - where the existing Canvas system lives -->
+            <div id="canvas-container">
+                <!-- Required by canvas.js: FreeCanvasManager.containerId = 'view-canvas' -->
+                <div id="view-canvas"></div>
+            </div>
+            
+            <!-- Future-ready panels (Stage 2+) -->
+            <aside id="app-left-panel"></aside>
+            <aside id="app-right-panel"></aside>
+            
+        </main>
+        
+    </div>
+    
+    <!-- JavaScript loading order is critical -->
+    <!-- 1. Storage must load first (used by canvas.js and canvas.engine.js) -->
+    <script src="js/storage.js"></script>
+    
+    <!-- 2. CanvasUI must load before canvas.js (provides styles and layoutHTML) -->
+    <script src="canvas/canvas.ui.js"></script>
+    
+    <!-- 3. CanvasEngine must load before canvas.js (provides math functions) -->
+    <script src="canvas/canvas.engine.js"></script>
+    
+    <!-- 4. Main canvas module loads last (depends on Storage, CanvasUI, CanvasEngine) -->
+    <script src="canvas/canvas.js"></script>
+    
+    <!-- Application initialization -->
+    <script>
+        // Initialize the application after DOM is ready and all scripts are loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update status
+            const statusEl = document.getElementById('app-status');
+            if (statusEl) {
+                statusEl.textContent = 'Canvas Ready';
+            }
+            
+            // Initialize the Canvas Manager
+            if (typeof FreeCanvasManager !== 'undefined' && typeof FreeCanvasManager.render === 'function') {
+                FreeCanvasManager.render();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/* css/canvas.css - Canvas-specific styles */
+
+/* Canvas container fills the workspace */
+#canvas-container {
+    background-color: #000000;
+}
+
+/* Ensure canvas manager view takes full container height */
+#canvas-manager-view {
+    box-sizing: border-box;
+}
+
+/* Workspace positioning fix */
+#canvas-workspace {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Viewport fills workspace */
+#viewport {
+    width: 100%;
+    height: 100%;
+}
+
+/* SVG layer for edge rendering */
+#svg-layer {
+    pointer-events: none;
+}
+
+/* Nodes container */
+#nodes-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Canvas element for pan/zoom */
+#canvas {
+    transform-origin: 0 0;
+    background-image: radial-gradient(circle, #333 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+/* Prevent text selection during canvas operations */
+#viewport {
+    user-select: none;
+    -webkit-user-select: none;
+}
