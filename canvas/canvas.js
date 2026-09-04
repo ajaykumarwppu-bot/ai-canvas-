@@ -173,6 +173,22 @@ const FreeCanvasManager = {
         let activeEditEdge = null;
         let activeColorTarget = null; 
 
+        // --- EXPOSE STATE FOR API (Stage 2 Integration) ---
+        // Expose arrays and functions to window for CanvasAPI access
+        window.canvasState = {
+            getNodes: () => nodes,
+            setNodes: (newNodes) => { nodes = newNodes; },
+            getEdges: () => edges,
+            setEdges: (newEdges) => { edges = newEdges; },
+            getNextNodeId: () => nextNodeId++,
+            getNextEdgeId: () => nextEdgeId++,
+            renderNodes: null,
+            renderEdges: null,
+            saveToHistory: null,
+            dataId: dataId
+        };
+        // --------------------------------------------------
+
         const updateSwatchesUI = () => {
             const colors = JSON.parse(localStorage.getItem('canvas_saved_colors') || '[]');
             document.getElementById('popover-swatches').innerHTML = colors.map(c => `<div class="swatch" style="background:${c}" data-color="${c}"></div>`).join('');
@@ -246,6 +262,9 @@ const FreeCanvasManager = {
             Storage.save(dataId + '_edges', edges);
             FreeCanvasManager.extractGlobalTasks(dataId, nodes);
         };
+        
+        // Expose saveToHistory and render functions to canvasState for API
+        window.canvasState.saveToHistory = saveToHistory;
 
         const loadState = () => {
             const sNodes = Storage.load(dataId + '_nodes');
@@ -448,6 +467,7 @@ const FreeCanvasManager = {
                 content.innerHTML = FreeCanvasManager.formatNodeHTML(node.text);
                 el.appendChild(content);
 
+                // ... rest of renderNodes logic
                 content.querySelectorAll('.todo-box').forEach(box => {
                     box.addEventListener('mousedown', (e) => e.stopPropagation());
                     box.addEventListener('click', (e) => {
@@ -500,6 +520,9 @@ const FreeCanvasManager = {
                 nodesContainer.appendChild(el);
             });
         };
+        
+        // Expose renderNodes to canvasState for API
+        window.canvasState.renderNodes = renderNodes;
 
         const renderEdges = () => {
             const defs = svgLayer.querySelector('defs');
@@ -548,6 +571,9 @@ const FreeCanvasManager = {
                 hitPath.addEventListener('dblclick', (e) => { if (isReadOnly) return; e.stopPropagation(); openEdgeEditor(edge); });
             });
         };
+        
+        // Expose renderEdges to canvasState for API
+        window.canvasState.renderEdges = renderEdges;
 
         const openEdgeEditor = (edge) => {
             activeEditEdge = edge;
