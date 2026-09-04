@@ -40,16 +40,19 @@
     <!-- 1. Storage must load first (used by canvas.js and canvas.engine.js) -->
     <script src="js/storage.js"></script>
     
-    <!-- 2. CanvasUI must load before canvas.js (provides styles and layoutHTML) -->
+    <!-- 2. Canvas Layout Engine (independent, for future AI layout features) -->
+    <script src="js/canvas.layout.js"></script>
+    
+    <!-- 3. CanvasUI must load before canvas.js (provides styles and layoutHTML) -->
     <script src="canvas/canvas.ui.js"></script>
     
-    <!-- 3. CanvasEngine must load before canvas.js (provides math functions) -->
+    <!-- 4. CanvasEngine must load before canvas.js (provides math functions) -->
     <script src="canvas/canvas.engine.js"></script>
     
-    <!-- 4. Main canvas module loads last (depends on Storage, CanvasUI, CanvasEngine) -->
+    <!-- 5. Main canvas module loads last (depends on Storage, CanvasUI, CanvasEngine) -->
     <script src="canvas/canvas.js"></script>
     
-    <!-- 5. Canvas API layer for external module control (Stage 2+) -->
+    <!-- 6. Canvas API layer for external module control (Stage 2+) -->
     <script src="canvas/canvas.api.js"></script>
     
     <!-- Application initialization -->
