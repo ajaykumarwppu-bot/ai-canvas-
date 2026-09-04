@@ -1,1 +1,8 @@
-Nothing needs to be added to .gitignore since only JavaScript source files (.js) and HTML files (.html) are being tracked, which are core source code files that should not be ignored.
+(js/ai.schema.js - this appears to be a JavaScript source file, which should not be ignored
+index.html - this is an HTML source file, which should not be ignored
+
+Since only source files (.js and .html) were added/modified and no build artifacts, dependencies, or temporary files were detected, no .gitignore rules are needed.)
+
+```javascript
+
+```
