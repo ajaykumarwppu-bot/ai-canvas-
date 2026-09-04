@@ -28,6 +28,18 @@
                 <div id="view-canvas"></div>
             </div>
             
+            <!-- AI Chat Panel -->
+            <aside id="ai-panel">
+                <div class="ai-panel-header">AI Assistant</div>
+                <div id="ai-messages" class="ai-messages-container" aria-live="polite"></div>
+                <div id="ai-status" class="ai-status" role="status"></div>
+                <div id="ai-loading" class="ai-loading" aria-hidden="true">Processing...</div>
+                <div class="ai-input-area">
+                    <textarea id="ai-input" class="ai-input" placeholder="Type your message..." rows="3" aria-label="Message input"></textarea>
+                    <button id="ai-send-btn" class="ai-send-btn" aria-label="Send message">Send</button>
+                </div>
+            </aside>
+            
             <!-- Future-ready panels (Stage 2+) -->
             <aside id="app-left-panel"></aside>
             <aside id="app-right-panel"></aside>
@@ -79,6 +91,9 @@
     <!-- 13. AI Conversation Module (orchestrates AI conversation requests) -->
     <script src="js/ai.conversation.js"></script>
 
+    <!-- 14. AI UI Module (user interface for AI chat interaction) -->
+    <script src="js/ai.ui.js"></script>
+
     <!-- Application initialization -->
     <script>
         // Initialize the application after DOM is ready and all scripts are loaded
@@ -92,6 +107,11 @@
             // Initialize the Canvas Manager
             if (typeof FreeCanvasManager !== 'undefined' && typeof FreeCanvasManager.render === 'function') {
                 FreeCanvasManager.render();
+            }
+            
+            // Initialize AI UI
+            if (typeof AIUI !== 'undefined' && typeof AIUI.init === 'function') {
+                AIUI.init();
             }
         });
     </script>
