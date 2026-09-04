@@ -162,5 +162,9 @@
 
     // Expose to global scope
     global.AppStorage = AppStorage;
+    
+    // Also expose as 'Storage' for backward compatibility with existing Canvas code
+    // The Canvas files (canvas.js, canvas.engine.js) expect a global 'Storage' object
+    global.Storage = AppStorage;
 
 })(typeof window !== 'undefined' ? window : this);
