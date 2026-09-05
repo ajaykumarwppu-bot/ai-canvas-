@@ -141,6 +141,102 @@
         return null;
     }
 
+    // --- Helper: Safely strip JavaScript-style line comments from JSON content ---
+    /**
+     * Removes JavaScript-style single-line comments (// ...) from JSON-like content
+     * while preserving // characters that appear inside quoted strings.
+     * 
+     * This function performs a character-by-character scan to distinguish between:
+     * - Comments outside strings: removed
+     * - // inside string values: preserved exactly
+     * 
+     * Correctly handles:
+     * - Escaped quotes: \"
+     * - Escaped backslashes: \\
+     * - Windows CRLF and Unix LF line endings
+     * 
+     * @param {string} content - The content to process
+     * @returns {string} Content with comments removed, strings preserved
+     */
+    function stripJsonLineCommentsSafely(content) {
+        if (typeof content !== 'string') {
+            return content;
+        }
+
+        let result = '';
+        let i = 0;
+        const len = content.length;
+        let inString = false;
+
+        while (i < len) {
+            const char = content[i];
+            const nextChar = i + 1 < len ? content[i + 1] : '';
+
+            // If we're inside a string
+            if (inString) {
+                // Check for escape sequence
+                if (char === '\\' && nextChar !== '') {
+                    // Include both the backslash and the escaped character
+                    result += char + nextChar;
+                    i += 2;
+                    continue;
+                }
+
+                // Check for closing quote
+                if (char === '"') {
+                    inString = false;
+                    result += char;
+                    i++;
+                    continue;
+                }
+
+                // Inside string: preserve everything
+                result += char;
+                i++;
+                continue;
+            }
+
+            // Not inside a string
+
+            // Check for opening quote
+            if (char === '"') {
+                inString = true;
+                result += char;
+                i++;
+                continue;
+            }
+
+            // Check for // comment start
+            if (char === '/' && nextChar === '/') {
+                // Skip characters until end of line
+                i += 2; // Skip the //
+                while (i < len) {
+                    const c = content[i];
+                    // Stop at newline (handle both \r\n and \n)
+                    if (c === '\n' || c === '\r') {
+                        // Preserve the newline character(s)
+                        if (c === '\r' && i + 1 < len && content[i + 1] === '\n') {
+                            result += '\r\n';
+                            i += 2;
+                        } else {
+                            result += c;
+                            i++;
+                        }
+                        break;
+                    }
+                    i++;
+                }
+                continue;
+            }
+
+            // Regular character outside string
+            result += char;
+            i++;
+        }
+
+        return result;
+    }
+
     // --- Helper: Extract JSON from Markdown-fenced code blocks ---
     /**
      * Extracts JSON content from a string that may contain Markdown code fences.
@@ -166,7 +262,10 @@
         let match = fencePattern.exec(trimmed);
         
         while (match) {
-            const codeContent = match[1].trim();
+            let codeContent = match[1].trim();
+            
+            // Strip JavaScript-style line comments safely before parsing
+            codeContent = stripJsonLineCommentsSafely(codeContent);
             
             // Try to parse the extracted code content
             if (codeContent.startsWith('{') || codeContent.startsWith('[')) {
@@ -183,8 +282,9 @@
         // No fenced blocks found or none contained valid JSON
         // Try parsing the entire content as raw JSON
         if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            let cleanedContent = stripJsonLineCommentsSafely(trimmed);
             try {
-                return JSON.parse(trimmed);
+                return JSON.parse(cleanedContent);
             } catch (e) {
                 return null;
             }
