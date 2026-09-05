@@ -1,1 +1,4 @@
-(css/app.css, index.html, css/ai.css - these are all source files that should not be ignored)
+(css/ai.css, index.html, js/ai.ui.js)
+
+# No build artifacts, dependencies, or temp files detected in changes
+# Only source files (.css, .html, .js) - no ignores needed

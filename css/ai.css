@@ -27,6 +27,61 @@
     border-bottom: 1px solid #333;
     background-color: #222;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ai-panel-title {
+    flex: 1;
+}
+
+.ai-panel-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-new-chat-btn {
+    padding: 6px 10px;
+    background-color: #333;
+    color: #ffffff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.ai-new-chat-btn:hover:not(:disabled) {
+    background-color: #444;
+    border-color: #666;
+}
+
+.ai-new-chat-btn:focus {
+    outline: 2px solid #a371f7;
+    outline-offset: 2px;
+}
+
+.ai-settings-btn {
+    padding: 6px 8px;
+    background-color: transparent;
+    color: #a371f7;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.ai-settings-btn:hover:not(:disabled) {
+    background-color: rgba(163, 113, 247, 0.1);
+    border-color: #a371f7;
+}
+
+.ai-settings-btn:focus {
+    outline: 2px solid #a371f7;
+    outline-offset: 2px;
 }
 
 /* --------------------------------------------
@@ -411,5 +466,215 @@
 @media print {
     #ai-panel {
         display: none;
+    }
+}
+
+/* --------------------------------------------
+   Settings View
+   -------------------------------------------- */
+.ai-settings-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #1a1a1a;
+    display: none;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.ai-settings-view[aria-hidden="false"] {
+    display: flex;
+}
+
+.ai-settings-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #333;
+    background-color: #222;
+    flex-shrink: 0;
+}
+
+.ai-settings-back-btn {
+    padding: 8px 12px;
+    background-color: transparent;
+    color: #a371f7;
+    border: 1px solid #a371f7;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.ai-settings-back-btn:hover:not(:disabled) {
+    background-color: rgba(163, 113, 247, 0.1);
+}
+
+.ai-settings-back-btn:focus {
+    outline: 2px solid #a371f7;
+    outline-offset: 2px;
+}
+
+.ai-settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ai-settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-settings-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #a371f7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ai-settings-select,
+.ai-settings-input {
+    padding: 10px 12px;
+    background-color: #111;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 13px;
+    font-family: Arial, sans-serif;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ai-settings-select:focus,
+.ai-settings-input:focus {
+    outline: none;
+    border-color: #a371f7;
+    box-shadow: 0 0 5px rgba(163, 113, 247, 0.3);
+}
+
+.ai-settings-select:disabled,
+.ai-settings-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #0a0a0a;
+}
+
+.ai-settings-select {
+    cursor: pointer;
+}
+
+.ai-settings-select option {
+    background-color: #111;
+    color: #ffffff;
+}
+
+.ai-settings-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.ai-settings-save-btn {
+    padding: 10px 16px;
+    background-color: #a371f7;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex: 1;
+}
+
+.ai-settings-save-btn:hover:not(:disabled) {
+    background-color: #8c52ea;
+}
+
+.ai-settings-save-btn:focus {
+    outline: 2px solid #a371f7;
+    outline-offset: 2px;
+}
+
+.ai-settings-cancel-btn {
+    padding: 10px 16px;
+    background-color: #333;
+    color: #ffffff;
+    border: 1px solid #555;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    flex: 1;
+}
+
+.ai-settings-cancel-btn:hover:not(:disabled) {
+    background-color: #444;
+    border-color: #666;
+}
+
+.ai-settings-cancel-btn:focus {
+    outline: 2px solid #a371f7;
+    outline-offset: 2px;
+}
+
+.ai-settings-status {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+.ai-settings-status-error {
+    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.ai-settings-status-warning {
+    color: #ffd93d;
+    background-color: rgba(255, 217, 61, 0.1);
+}
+
+.ai-settings-status-success {
+    color: #6bff6b;
+    background-color: rgba(107, 255, 107, 0.1);
+}
+
+.ai-settings-status-info {
+    color: #888;
+}
+
+/* Chat view visibility - hide messages/input when settings is shown */
+.ai-panel.ai-view-settings #ai-messages,
+.ai-panel.ai-view-settings #ai-status,
+.ai-panel.ai-view-settings #ai-loading,
+.ai-panel.ai-view-settings .ai-input-area {
+    display: none;
+}
+
+/* Responsive adjustments for settings */
+@media (max-width: 768px) {
+    .ai-settings-content {
+        padding: 12px;
+    }
+    
+    .ai-settings-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .ai-settings-header {
+        padding: 10px 12px;
+    }
+    
+    .ai-settings-back-btn {
+        font-size: 12px;
+        padding: 6px 10px;
     }
 }

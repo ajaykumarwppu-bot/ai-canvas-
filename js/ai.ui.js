@@ -43,6 +43,7 @@
     let isInitialized = false;
     let isSending = false;
     let elements = {};
+    let isSettingsViewActive = false;
 
     // --- DOM Element Cache ---
     function cacheElements() {
@@ -52,7 +53,19 @@
             input: document.getElementById('ai-input'),
             sendButton: document.getElementById('ai-send-btn'),
             statusArea: document.getElementById('ai-status'),
-            loadingIndicator: document.getElementById('ai-loading')
+            loadingIndicator: document.getElementById('ai-loading'),
+            // Settings view elements
+            settingsView: document.getElementById('ai-settings-view'),
+            settingsBtn: document.getElementById('ai-settings-btn'),
+            newChatBtn: document.getElementById('ai-new-chat-btn'),
+            settingsBackBtn: document.getElementById('ai-settings-back-btn'),
+            settingsProvider: document.getElementById('ai-settings-provider'),
+            settingsApiKey: document.getElementById('ai-settings-apikey'),
+            settingsBaseUrl: document.getElementById('ai-settings-baseurl'),
+            settingsModel: document.getElementById('ai-settings-model'),
+            settingsSaveBtn: document.getElementById('ai-settings-save-btn'),
+            settingsCancelBtn: document.getElementById('ai-settings-cancel-btn'),
+            settingsStatus: document.getElementById('ai-settings-status')
         };
         return Object.values(elements).every(el => el !== null && el !== undefined);
     }
@@ -114,6 +127,36 @@
 
         // Input change - clear status when user starts typing
         elements.input.addEventListener('input', handleInputChange);
+
+        // Settings button click
+        if (elements.settingsBtn) {
+            elements.settingsBtn.addEventListener('click', showSettingsView);
+        }
+
+        // New Chat button click
+        if (elements.newChatBtn) {
+            elements.newChatBtn.addEventListener('click', handleNewChat);
+        }
+
+        // Settings back button click
+        if (elements.settingsBackBtn) {
+            elements.settingsBackBtn.addEventListener('click', hideSettingsView);
+        }
+
+        // Settings cancel button click
+        if (elements.settingsCancelBtn) {
+            elements.settingsCancelBtn.addEventListener('click', hideSettingsView);
+        }
+
+        // Settings save button click
+        if (elements.settingsSaveBtn) {
+            elements.settingsSaveBtn.addEventListener('click', handleSettingsSave);
+        }
+
+        // Provider change - update models and base URL
+        if (elements.settingsProvider) {
+            elements.settingsProvider.addEventListener('change', handleProviderChange);
+        }
     }
 
     // --- Event Handlers ---
@@ -449,6 +492,305 @@
     // --- Check Initialization Status ---
     function isReady() {
         return isInitialized && cacheElements();
+    }
+
+    // --- Settings View Functions ---
+
+    // --- Show Settings View ---
+    function showSettingsView() {
+        if (!elements.settingsView || !elements.panel) {
+            return;
+        }
+
+        // Populate settings form with current values
+        populateSettingsForm();
+
+        // Show settings view, hide chat view
+        elements.settingsView.setAttribute('aria-hidden', 'false');
+        elements.panel.classList.add('ai-view-settings');
+        isSettingsViewActive = true;
+
+        // Focus provider selector
+        if (elements.settingsProvider) {
+            elements.settingsProvider.focus();
+        }
+    }
+
+    // --- Hide Settings View ---
+    function hideSettingsView() {
+        if (!elements.settingsView || !elements.panel) {
+            return;
+        }
+
+        // Hide settings view, show chat view
+        elements.settingsView.setAttribute('aria-hidden', 'true');
+        elements.panel.classList.remove('ai-view-settings');
+        isSettingsViewActive = false;
+
+        // Clear settings status
+        if (elements.settingsStatus) {
+            elements.settingsStatus.textContent = '';
+            elements.settingsStatus.className = 'ai-settings-status';
+        }
+
+        // Focus input for next message
+        if (elements.input) {
+            elements.input.focus();
+        }
+    }
+
+    // --- Populate Settings Form ---
+    function populateSettingsForm() {
+        if (typeof AISettings === 'undefined') {
+            return;
+        }
+
+        const settings = AISettings.get();
+
+        // Set provider
+        if (elements.settingsProvider) {
+            elements.settingsProvider.value = settings.provider || '';
+        }
+
+        // Set API key (masked - just show it's set)
+        if (elements.settingsApiKey) {
+            elements.settingsApiKey.value = settings.apiKey || '';
+        }
+
+        // Set base URL
+        if (elements.settingsBaseUrl) {
+            elements.settingsBaseUrl.value = settings.baseUrl || '';
+        }
+
+        // Set model
+        if (elements.settingsModel) {
+            elements.settingsModel.value = settings.model || '';
+        }
+
+        // Populate providers dropdown
+        populateProvidersDropdown(settings.provider);
+
+        // Populate models based on selected provider
+        if (settings.provider) {
+            populateModelsDropdown(settings.provider, settings.model);
+        }
+
+        // Update base URL field state based on provider
+        if (settings.provider) {
+            updateBaseUrlFieldState(settings.provider);
+        }
+    }
+
+    // --- Populate Providers Dropdown ---
+    function populateProvidersDropdown(selectedProvider) {
+        if (!elements.settingsProvider || typeof AIProviders === 'undefined') {
+            return;
+        }
+
+        const providers = AIProviders.getAll();
+        const currentValue = elements.settingsProvider.value;
+
+        // Clear existing options except the first one
+        elements.settingsProvider.innerHTML = '<option value="">Select Provider</option>';
+
+        providers.forEach(provider => {
+            const option = document.createElement('option');
+            option.value = provider.id;
+            option.textContent = provider.name;
+            elements.settingsProvider.appendChild(option);
+        });
+
+        // Restore selection
+        if (selectedProvider && AIProviders.exists(selectedProvider)) {
+            elements.settingsProvider.value = selectedProvider;
+        }
+    }
+
+    // --- Populate Models Dropdown ---
+    function populateModelsDropdown(providerId, selectedModel) {
+        if (!elements.settingsModel || typeof AIProviders === 'undefined') {
+            return;
+        }
+
+        const models = AIProviders.getSupportedModels(providerId);
+        const supportsCustomModel = AIProviders.supportsCustomModel(providerId);
+
+        // Clear existing options
+        elements.settingsModel.innerHTML = '';
+
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = supportsCustomModel ? 'Enter or select model' : 'Select Model';
+        elements.settingsModel.appendChild(defaultOption);
+
+        // Add model options
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = model;
+            elements.settingsModel.appendChild(option);
+        });
+
+        // If custom model is supported and current model isn't in list, add it
+        if (supportsCustomModel && selectedModel && !models.includes(selectedModel)) {
+            const customOption = document.createElement('option');
+            customOption.value = selectedModel;
+            customOption.textContent = selectedModel + ' (custom)';
+            customOption.selected = true;
+            elements.settingsModel.appendChild(customOption);
+        } else if (selectedModel && models.includes(selectedModel)) {
+            elements.settingsModel.value = selectedModel;
+        }
+    }
+
+    // --- Update Base URL Field State ---
+    function updateBaseUrlFieldState(providerId) {
+        if (!elements.settingsBaseUrl || typeof AIProviders === 'undefined') {
+            return;
+        }
+
+        const supportsCustomBaseUrl = AIProviders.supportsCustomBaseUrl(providerId);
+        const defaultBaseUrl = AIProviders.getDefaultBaseUrl(providerId);
+
+        if (!supportsCustomBaseUrl) {
+            // Disable field and show default
+            elements.settingsBaseUrl.disabled = true;
+            elements.settingsBaseUrl.value = defaultBaseUrl;
+            elements.settingsBaseUrl.placeholder = 'Set by provider';
+        } else {
+            // Enable field
+            elements.settingsBaseUrl.disabled = false;
+            // Only set default if currently empty
+            if (!elements.settingsBaseUrl.value || elements.settingsBaseUrl.value === defaultBaseUrl) {
+                elements.settingsBaseUrl.value = defaultBaseUrl;
+            }
+            elements.settingsBaseUrl.placeholder = 'https://...';
+        }
+    }
+
+    // --- Handle Provider Change ---
+    function handleProviderChange() {
+        if (!elements.settingsProvider || typeof AIProviders === 'undefined') {
+            return;
+        }
+
+        const providerId = elements.settingsProvider.value;
+
+        if (!providerId) {
+            // No provider selected - clear models and base URL
+            if (elements.settingsModel) {
+                elements.settingsModel.innerHTML = '<option value="">Select Model</option>';
+            }
+            if (elements.settingsBaseUrl) {
+                elements.settingsBaseUrl.value = '';
+                elements.settingsBaseUrl.disabled = false;
+                elements.settingsBaseUrl.placeholder = 'https://...';
+            }
+            return;
+        }
+
+        // Update models dropdown
+        populateModelsDropdown(providerId, '');
+
+        // Update base URL field
+        updateBaseUrlFieldState(providerId);
+    }
+
+    // --- Handle New Chat ---
+    function handleNewChat() {
+        // Clear conversation history
+        if (typeof AIConversation !== 'undefined' && typeof AIConversation.clearHistory === 'function') {
+            AIConversation.clearHistory();
+        }
+
+        // Clear visible messages
+        clearMessages();
+
+        // Clear status
+        if (elements.statusArea) {
+            elements.statusArea.textContent = '';
+            elements.statusArea.className = 'ai-status';
+        }
+
+        // Focus input
+        if (elements.input) {
+            elements.input.focus();
+        }
+    }
+
+    // --- Handle Settings Save ---
+    function handleSettingsSave() {
+        if (typeof AISettings === 'undefined') {
+            showSettingsStatus('Settings system not available', 'error');
+            return;
+        }
+
+        // Read form values
+        const provider = elements.settingsProvider ? elements.settingsProvider.value.trim() : '';
+        const apiKey = elements.settingsApiKey ? elements.settingsApiKey.value : '';
+        const baseUrl = elements.settingsBaseUrl ? elements.settingsBaseUrl.value.trim() : '';
+        const model = elements.settingsModel ? elements.settingsModel.value.trim() : '';
+
+        // Build settings object
+        const settings = {
+            provider: provider,
+            apiKey: apiKey,
+            baseUrl: baseUrl,
+            model: model
+        };
+
+        // Validate and save
+        const result = AISettings.save(settings);
+
+        if (result.success) {
+            showSettingsStatus('Settings saved successfully', 'success');
+            
+            // Wait briefly then return to chat view
+            setTimeout(function() {
+                hideSettingsView();
+            }, 800);
+        } else {
+            // Display errors
+            let errorMessage = 'Failed to save settings';
+            if (result.errors && result.errors.length > 0) {
+                const firstError = result.errors[0];
+                if (firstError.message) {
+                    errorMessage = firstError.message;
+                } else if (typeof firstError === 'string') {
+                    errorMessage = firstError;
+                }
+            }
+            showSettingsStatus(errorMessage, 'error');
+
+            // Also show warnings if any
+            if (result.warnings && result.warnings.length > 0) {
+                const warningMessages = result.warnings.map(w => w.message || String(w)).join('; ');
+                if (warningMessages) {
+                    console.warn('AI Settings warnings:', warningMessages);
+                }
+            }
+        }
+    }
+
+    // --- Show Settings Status ---
+    function showSettingsStatus(message, type) {
+        if (!elements.settingsStatus) {
+            return;
+        }
+
+        if (!message || typeof message !== 'string') {
+            elements.settingsStatus.textContent = '';
+            elements.settingsStatus.className = 'ai-settings-status';
+            return;
+        }
+
+        elements.settingsStatus.textContent = message;
+
+        // Set status type class
+        const validTypes = ['error', 'warning', 'success', 'info'];
+        const statusType = validTypes.includes(type) ? type : 'info';
+        elements.settingsStatus.className = 'ai-settings-status ai-settings-status-' + statusType;
     }
 
     // --- Public API ---
