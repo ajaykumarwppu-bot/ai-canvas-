@@ -100,36 +100,23 @@
             }
         }
 
-        // If content is a string, check if it might be JSON containing Canvas data
+        // If content is a string, use robust JSON extraction
         if (typeof content === 'string') {
-            const trimmed = content.trim();
+            // Use extractJsonFromMarkdown to handle fenced blocks and pure JSON
+            const parsed = extractJsonFromMarkdown(content);
             
-            // Must start with { to be considered potential JSON object
-            if (!trimmed.startsWith('{')) {
-                return false;
-            }
-
-            // Try to parse safely
-            try {
-                const parsed = JSON.parse(trimmed);
-                
-                // Check if parsed result looks like Canvas data
-                if (parsed && typeof parsed === 'object') {
-                    // Has nodes array - likely Canvas data
-                    if (parsed.nodes && Array.isArray(parsed.nodes)) {
-                        return true;
-                    }
-                    // Has intent indicating canvas operation
-                    if (parsed.intent && typeof parsed.intent === 'string') {
-                        return true;
-                    }
+            if (parsed && typeof parsed === 'object') {
+                // Has nodes array - likely Canvas data
+                if (parsed.nodes && Array.isArray(parsed.nodes)) {
+                    return true;
                 }
-                
-                return false;
-            } catch (e) {
-                // Not valid JSON, so not Canvas data
-                return false;
+                // Has intent indicating canvas operation
+                if (parsed.intent && typeof parsed.intent === 'string') {
+                    return true;
+                }
             }
+            
+            return false;
         }
 
         return false;
@@ -151,6 +138,58 @@
             return response.content;
         }
         
+        return null;
+    }
+
+    // --- Helper: Extract JSON from Markdown-fenced code blocks ---
+    /**
+     * Extracts JSON content from a string that may contain Markdown code fences.
+     * Supports formats:
+     * - Pure JSON: {"nodes": [...], "edges": [...]}
+     * - Fenced JSON: ```json {...} ```
+     * - Generic fenced code: ``` {...} ```
+     * - Text before/after JSON blocks
+     * 
+     * @param {string} content - The string content to parse
+     * @returns {Object|null} Parsed JSON object or null if no valid JSON found
+     */
+    function extractJsonFromMarkdown(content) {
+        if (typeof content !== 'string') {
+            return null;
+        }
+
+        const trimmed = content.trim();
+        
+        // Try to find fenced code blocks first (```json or ```)
+        // Pattern matches: ```json, ```, or ``` followed by optional whitespace and newline
+        const fencePattern = /```(?:json)?\s*\n([\s\S]*?)\n\s*```/gi;
+        let match = fencePattern.exec(trimmed);
+        
+        while (match) {
+            const codeContent = match[1].trim();
+            
+            // Try to parse the extracted code content
+            if (codeContent.startsWith('{') || codeContent.startsWith('[')) {
+                try {
+                    return JSON.parse(codeContent);
+                } catch (e) {
+                    // Try next fence block if this one fails
+                }
+            }
+            
+            match = fencePattern.exec(trimmed);
+        }
+
+        // No fenced blocks found or none contained valid JSON
+        // Try parsing the entire content as raw JSON
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+                return JSON.parse(trimmed);
+            } catch (e) {
+                return null;
+            }
+        }
+
         return null;
     }
 
@@ -189,36 +228,19 @@
             return result;
         }
 
-        // Case 2: Content is a JSON string
+        // Case 2: Content is a string - use robust JSON extraction
         if (typeof content === 'string') {
-            const trimmed = content.trim();
+            // Use extractJsonFromMarkdown to handle fenced blocks and pure JSON
+            const parsed = extractJsonFromMarkdown(content);
             
-            if (!trimmed.startsWith('{')) {
-                result.errors.push(makeError(
-                    ERROR_CODES.INVALID_CANVAS_DATA,
-                    'Content does not appear to be JSON'
-                ));
+            if (parsed && typeof parsed === 'object') {
+                result.success = true;
+                result.data = parsed;
                 return result;
-            }
-
-            try {
-                const parsed = JSON.parse(trimmed);
-                
-                if (parsed && typeof parsed === 'object') {
-                    result.success = true;
-                    result.data = parsed;
-                    return result;
-                } else {
-                    result.errors.push(makeError(
-                        ERROR_CODES.INVALID_CANVAS_DATA,
-                        'Parsed content is not an object'
-                    ));
-                    return result;
-                }
-            } catch (e) {
+            } else {
                 result.errors.push(makeError(
                     ERROR_CODES.INVALID_CANVAS_DATA,
-                    'Failed to parse JSON: ' + e.message
+                    'Content does not contain valid JSON'
                 ));
                 return result;
             }
