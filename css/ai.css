@@ -573,6 +573,16 @@
     color: #ffffff;
 }
 
+/* Custom input fields (for custom provider/model) */
+.ai-custom-input {
+    margin-top: 8px;
+}
+
+.ai-custom-input[aria-hidden="false"],
+.ai-custom-input:not([style*="display: none"]) {
+    display: block !important;
+}
+
 .ai-settings-actions {
     display: flex;
     gap: 12px;

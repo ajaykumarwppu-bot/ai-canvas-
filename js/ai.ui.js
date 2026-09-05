@@ -60,9 +60,11 @@
             newChatBtn: document.getElementById('ai-new-chat-btn'),
             settingsBackBtn: document.getElementById('ai-settings-back-btn'),
             settingsProvider: document.getElementById('ai-settings-provider'),
+            settingsCustomProvider: document.getElementById('ai-settings-custom-provider'),
             settingsApiKey: document.getElementById('ai-settings-apikey'),
             settingsBaseUrl: document.getElementById('ai-settings-baseurl'),
             settingsModel: document.getElementById('ai-settings-model'),
+            settingsCustomModel: document.getElementById('ai-settings-custom-model'),
             settingsSaveBtn: document.getElementById('ai-settings-save-btn'),
             settingsCancelBtn: document.getElementById('ai-settings-cancel-btn'),
             settingsStatus: document.getElementById('ai-settings-status')
@@ -156,6 +158,21 @@
         // Provider change - update models and base URL
         if (elements.settingsProvider) {
             elements.settingsProvider.addEventListener('change', handleProviderChange);
+        }
+
+        // Custom provider input change
+        if (elements.settingsCustomProvider) {
+            elements.settingsCustomProvider.addEventListener('input', handleCustomProviderInput);
+        }
+
+        // Model change
+        if (elements.settingsModel) {
+            elements.settingsModel.addEventListener('change', handleModelChange);
+        }
+
+        // Custom model input change
+        if (elements.settingsCustomModel) {
+            elements.settingsCustomModel.addEventListener('input', handleCustomModelInput);
         }
     }
 
@@ -588,9 +605,8 @@
         }
 
         const providers = AIProviders.getAll();
-        const currentValue = elements.settingsProvider.value;
-
-        // Clear existing options except the first one
+        
+        // Clear existing options
         elements.settingsProvider.innerHTML = '<option value="">Select Provider</option>';
 
         providers.forEach(provider => {
@@ -600,9 +616,56 @@
             elements.settingsProvider.appendChild(option);
         });
 
-        // Restore selection
-        if (selectedProvider && AIProviders.exists(selectedProvider)) {
-            elements.settingsProvider.value = selectedProvider;
+        // Add "Custom Provider" option at the end
+        const customOption = document.createElement('option');
+        customOption.value = '__custom__';
+        customOption.textContent = 'Custom Provider...';
+        elements.settingsProvider.appendChild(customOption);
+
+        // Restore selection - check if it's a predefined provider or custom
+        if (selectedProvider) {
+            if (AIProviders.exists(selectedProvider)) {
+                elements.settingsProvider.value = selectedProvider;
+                // Hide custom input since a predefined provider is selected
+                setCustomProviderVisible(false);
+            } else {
+                // Custom provider - select "Custom Provider..." option and show input
+                elements.settingsProvider.value = '__custom__';
+                setCustomProviderVisible(true);
+                if (elements.settingsCustomProvider) {
+                    elements.settingsCustomProvider.value = selectedProvider;
+                }
+            }
+        } else {
+            setCustomProviderVisible(false);
+        }
+    }
+
+    // --- Set Custom Provider Input Visibility ---
+    function setCustomProviderVisible(visible) {
+        if (!elements.settingsCustomProvider) {
+            return;
+        }
+        if (visible) {
+            elements.settingsCustomProvider.style.display = 'block';
+            elements.settingsCustomProvider.setAttribute('aria-hidden', 'false');
+        } else {
+            elements.settingsCustomProvider.style.display = 'none';
+            elements.settingsCustomProvider.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    // --- Set Custom Model Input Visibility ---
+    function setCustomModelInputVisible(visible) {
+        if (!elements.settingsCustomModel) {
+            return;
+        }
+        if (visible) {
+            elements.settingsCustomModel.style.display = 'block';
+            elements.settingsCustomModel.setAttribute('aria-hidden', 'false');
+        } else {
+            elements.settingsCustomModel.style.display = 'none';
+            elements.settingsCustomModel.setAttribute('aria-hidden', 'true');
         }
     }
 
@@ -624,7 +687,7 @@
         defaultOption.textContent = supportsCustomModel ? 'Enter or select model' : 'Select Model';
         elements.settingsModel.appendChild(defaultOption);
 
-        // Add model options
+        // Add predefined model options
         models.forEach(model => {
             const option = document.createElement('option');
             option.value = model;
@@ -632,15 +695,29 @@
             elements.settingsModel.appendChild(option);
         });
 
-        // If custom model is supported and current model isn't in list, add it
-        if (supportsCustomModel && selectedModel && !models.includes(selectedModel)) {
-            const customOption = document.createElement('option');
-            customOption.value = selectedModel;
-            customOption.textContent = selectedModel + ' (custom)';
-            customOption.selected = true;
-            elements.settingsModel.appendChild(customOption);
-        } else if (selectedModel && models.includes(selectedModel)) {
-            elements.settingsModel.value = selectedModel;
+        // Add "Custom Model" option if custom models are supported
+        if (supportsCustomModel) {
+            const customModelOption = document.createElement('option');
+            customModelOption.value = '__custom__';
+            customModelOption.textContent = 'Custom Model...';
+            elements.settingsModel.appendChild(customModelOption);
+        }
+
+        // Restore selection - check if it's a predefined model or custom
+        if (selectedModel) {
+            if (models.includes(selectedModel)) {
+                elements.settingsModel.value = selectedModel;
+                setCustomModelInputVisible(false);
+            } else {
+                // Custom model - select "Custom Model..." option and show input
+                elements.settingsModel.value = '__custom__';
+                setCustomModelInputVisible(true);
+                if (elements.settingsCustomModel) {
+                    elements.settingsCustomModel.value = selectedModel;
+                }
+            }
+        } else {
+            setCustomModelInputVisible(false);
         }
     }
 
@@ -687,14 +764,61 @@
                 elements.settingsBaseUrl.disabled = false;
                 elements.settingsBaseUrl.placeholder = 'https://...';
             }
+            setCustomProviderVisible(false);
+            setCustomModelInputVisible(false);
             return;
         }
 
-        // Update models dropdown
-        populateModelsDropdown(providerId, '');
+        if (providerId === '__custom__') {
+            // Custom provider selected - show custom input
+            setCustomProviderVisible(true);
+            // Clear models dropdown for custom provider
+            if (elements.settingsModel) {
+                elements.settingsModel.innerHTML = '<option value=\"\">Enter or select model</option><option value="__custom__">Custom Model...</option>';
+            }
+            // Enable base URL field for custom provider
+            if (elements.settingsBaseUrl) {
+                elements.settingsBaseUrl.disabled = false;
+                elements.settingsBaseUrl.placeholder = 'https://...';
+            }
+            setCustomModelInputVisible(false);
+        } else {
+            // Predefined provider selected
+            setCustomProviderVisible(false);
+            // Update models dropdown
+            populateModelsDropdown(providerId, '');
+            // Update base URL field
+            updateBaseUrlFieldState(providerId);
+        }
+    }
 
-        // Update base URL field
-        updateBaseUrlFieldState(providerId);
+    // --- Handle Custom Provider Input ---
+    function handleCustomProviderInput() {
+        // Just track that user is typing - actual value is read on save
+        // No special action needed here
+    }
+
+    // --- Handle Model Change ---
+    function handleModelChange() {
+        if (!elements.settingsModel) {
+            return;
+        }
+
+        const modelValue = elements.settingsModel.value;
+
+        if (modelValue === '__custom__') {
+            // Custom model selected - show custom input
+            setCustomModelInputVisible(true);
+        } else {
+            // Predefined model or empty selection
+            setCustomModelInputVisible(false);
+        }
+    }
+
+    // --- Handle Custom Model Input ---
+    function handleCustomModelInput() {
+        // Just track that user is typing - actual value is read on save
+        // No special action needed here
     }
 
     // --- Handle New Chat ---
@@ -727,10 +851,36 @@
         }
 
         // Read form values
-        const provider = elements.settingsProvider ? elements.settingsProvider.value.trim() : '';
+        let provider = elements.settingsProvider ? elements.settingsProvider.value.trim() : '';
         const apiKey = elements.settingsApiKey ? elements.settingsApiKey.value : '';
-        const baseUrl = elements.settingsBaseUrl ? elements.settingsBaseUrl.value.trim() : '';
-        const model = elements.settingsModel ? elements.settingsModel.value.trim() : '';
+        let baseUrl = elements.settingsBaseUrl ? elements.settingsBaseUrl.value.trim() : '';
+        let model = elements.settingsModel ? elements.settingsModel.value.trim() : '';
+
+        // Resolve custom provider value
+        if (provider === '__custom__') {
+            if (elements.settingsCustomProvider) {
+                provider = elements.settingsCustomProvider.value.trim();
+            }
+        }
+
+        // Resolve custom model value
+        if (model === '__custom__') {
+            if (elements.settingsCustomModel) {
+                model = elements.settingsCustomModel.value.trim();
+            }
+        }
+
+        // Validation for custom provider
+        if (provider === '' || provider === '__custom__') {
+            showSettingsStatus('Please enter a custom provider name or select a predefined provider', 'error');
+            return;
+        }
+
+        // Validation for custom model
+        if (model === '' || model === '__custom__') {
+            showSettingsStatus('Please enter a custom model name or select a predefined model', 'error');
+            return;
+        }
 
         // Build settings object
         const settings = {
