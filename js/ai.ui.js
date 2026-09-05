@@ -281,9 +281,10 @@
         // Success - render AI response
         if (result.type === 'text' && result.content) {
             addMessage('assistant', result.content);
-        } else if (result.type === 'canvas' && result.content) {
-            // Canvas action was performed
-            addMessage('assistant', result.content);
+        } else if (result.type === 'canvas' && result.canvasProcessed) {
+            // Canvas action was performed - do NOT display JSON in chat
+            // Instead, show a user-friendly message
+            addMessage('assistant', 'I have created the plan on the canvas.');
             
             // Show Canvas processing status
             showCanvasStatus();
