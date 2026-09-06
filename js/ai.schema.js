@@ -155,12 +155,20 @@ const AISchema = (function() {
             }
         }
 
-        // Normalize Nodes
+        // Normalize Nodes - FIXED: Robust ID generation and type coercion
         if (Array.isArray(data.nodes)) {
-            normalized.nodes = data.nodes.map(node => {
+            normalized.nodes = data.nodes.map((node, index) => {
                 const n = {};
-                n.id = node.id || node.nodeId || node.key || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                // FIXED: Coerce ID to string, generate if missing/invalid
+                let rawId = node.id || node.nodeId || node.key;
+                if (rawId === undefined || rawId === null || rawId === '') {
+                    rawId = `node_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
+                }
+                // Ensure ID is always a string
+                n.id = String(rawId).substring(0, CONFIG.MAX_ID_LENGTH);
 
+                // Extract text with alias support
                 let textVal = node.text;
                 if (textVal === undefined) {
                     for (let alias of ALIASES.node.text) {
@@ -170,10 +178,25 @@ const AISchema = (function() {
                         }
                     }
                 }
-                n.text = (textVal !== undefined) ? String(textVal) : "";
+                n.text = (textVal !== undefined) ? String(textVal).substring(0, CONFIG.MAX_TEXT_LENGTH) : "";
 
-                n.width = (node.width || node.w || node.nodeWidth);
-                n.height = (node.height || node.h || node.nodeHeight);
+                // FIXED: Coerce width/height to numbers, validate ranges
+                let widthVal = node.width || node.w || node.nodeWidth;
+                if (widthVal !== undefined && widthVal !== null) {
+                    const parsedWidth = parseFloat(widthVal);
+                    if (!isNaN(parsedWidth) && parsedWidth > 0 && parsedWidth <= 5000) {
+                        n.width = parsedWidth;
+                    }
+                }
+                
+                let heightVal = node.height || node.h || node.nodeHeight;
+                if (heightVal !== undefined && heightVal !== null) {
+                    const parsedHeight = parseFloat(heightVal);
+                    if (!isNaN(parsedHeight) && parsedHeight > 0 && parsedHeight <= 5000) {
+                        n.height = parsedHeight;
+                    }
+                }
+                
                 n.color = node.color || node.colour || node.bgColor;
 
                 if (node.tags) n.tags = node.tags;
@@ -183,10 +206,12 @@ const AISchema = (function() {
             });
         }
 
-        // Normalize Edges
+        // Normalize Edges - FIXED: Robust ID coercion for from/to
         if (Array.isArray(data.edges)) {
-            normalized.edges = data.edges.map(edge => {
+            normalized.edges = data.edges.map((edge, index) => {
                 const e = {};
+                
+                // FIXED: Coerce 'from' to string
                 let fromVal = edge.from;
                 if (fromVal === undefined) {
                     for (let alias of ALIASES.edge.from) {
@@ -196,8 +221,9 @@ const AISchema = (function() {
                         }
                     }
                 }
-                e.from = fromVal;
+                e.from = (fromVal !== undefined && fromVal !== null) ? String(fromVal) : '';
 
+                // FIXED: Coerce 'to' to string
                 let toVal = edge.to;
                 if (toVal === undefined) {
                     for (let alias of ALIASES.edge.to) {
@@ -207,8 +233,9 @@ const AISchema = (function() {
                         }
                     }
                 }
-                e.to = toVal;
+                e.to = (toVal !== undefined && toVal !== null) ? String(toVal) : '';
 
+                // Extract edge text
                 let textVal = edge.text;
                 if (textVal === undefined) {
                     for (let alias of ALIASES.edge.text) {
@@ -218,7 +245,7 @@ const AISchema = (function() {
                         }
                     }
                 }
-                e.text = textVal || "";
+                e.text = (textVal !== undefined) ? String(textVal).substring(0, CONFIG.MAX_TEXT_LENGTH) : "";
 
                 if (edge.color) e.color = edge.color;
                 if (edge.fromSide) e.fromSide = edge.fromSide;
@@ -253,6 +280,7 @@ const AISchema = (function() {
         for (let i = 0; i < data.nodes.length; i++) {
             const node = data.nodes[i];
 
+            // FIXED: Since normalize() ensures IDs are strings, we just check existence
             if (!node.id || typeof node.id !== 'string') {
                 errors.push(makeError('INVALID_NODE_ID', `Node at index ${i} has invalid ID.`));
                 continue;
@@ -261,7 +289,16 @@ const AISchema = (function() {
                 errors.push(makeError('ID_TOO_LONG', `Node ID '${node.id}' exceeds max length.`));
             }
             if (nodeIds.has(node.id)) {
-                errors.push(makeError('DUPLICATE_NODE_ID', `Duplicate node ID: '${node.id}'`));
+                // FIXED: Auto-repair duplicate IDs by appending suffix instead of hard fail
+                let newId = node.id;
+                let suffix = 1;
+                while (nodeIds.has(newId)) {
+                    newId = `${node.id}_dup${suffix}`;
+                    suffix++;
+                }
+                warnings.push(makeWarning('DUPLICATE_NODE_ID_REPAIRED', `Duplicate node ID '${node.id}' renamed to '${newId}'`));
+                node.id = newId;
+                nodeIds.add(newId);
             } else {
                 nodeIds.add(node.id);
             }
@@ -291,6 +328,7 @@ const AISchema = (function() {
         for (let i = 0; i < data.edges.length; i++) {
             const edge = data.edges[i];
             
+            // FIXED: Since normalize() ensures from/to are strings, check existence
             if (!edge.from || typeof edge.from !== 'string') {
                 errors.push(makeError('INVALID_EDGE_SOURCE', `Edge at index ${i} has invalid source.`));
                 continue;
@@ -300,11 +338,15 @@ const AISchema = (function() {
                 continue;
             }
 
+            // FIXED: Skip edges referencing non-existent nodes with warning instead of hard error
+            // This allows partial canvas updates instead of complete failure
             if (!nodeIds.has(edge.from)) {
-                errors.push(makeError('BROKEN_EDGE_SOURCE', `Edge references non-existent node: '${edge.from}'`));
+                warnings.push(makeWarning('BROKEN_EDGE_SOURCE', `Edge references non-existent node: '${edge.from}'. Edge skipped.`));
+                continue; // Skip this edge but continue processing others
             }
             if (!nodeIds.has(edge.to)) {
-                errors.push(makeError('BROKEN_EDGE_TARGET', `Edge references non-existent node: '${edge.to}'`));
+                warnings.push(makeWarning('BROKEN_EDGE_TARGET', `Edge references non-existent node: '${edge.to}'. Edge skipped.`));
+                continue; // Skip this edge but continue processing others
             }
         }
 

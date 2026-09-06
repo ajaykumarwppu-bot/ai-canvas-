@@ -286,11 +286,64 @@
             try {
                 return JSON.parse(cleanedContent);
             } catch (e) {
-                return null;
+                // Fall through to heuristic extraction
+            }
+        }
+
+        // Heuristic: Find the first '{' and last '}' and try to slice
+        const firstBrace = trimmed.indexOf('{');
+        const lastBrace = trimmed.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            const sliced = trimmed.substring(firstBrace, lastBrace + 1);
+            let cleanedSliced = stripJsonLineCommentsSafely(sliced);
+            
+            try {
+                return JSON.parse(cleanedSliced);
+            } catch (e) {
+                // Try aggressive repair
+                const repaired = attemptJsonRepair(cleanedSliced);
+                if (repaired) {
+                    console.warn('[AICanvasAdapter] Successfully repaired malformed JSON.');
+                    return repaired;
+                }
             }
         }
 
         return null;
+    }
+
+    // --- Helper: Attempt to repair common JSON errors ---
+    /**
+     * Attempts to fix common JSON formatting issues:
+     * - Trailing commas
+     * - Single quotes instead of double quotes
+     * - Unquoted keys
+     * 
+     * @param {string} str - Potentially malformed JSON string
+     * @returns {Object|null} Repaired and parsed object, or null if repair fails
+     */
+    function attemptJsonRepair(str) {
+        if (!str || typeof str !== 'string') return null;
+        
+        let repaired = str;
+        
+        // 1. Remove trailing commas before } or ]
+        repaired = repaired.replace(/,\s*([}\]])/g, '$1');
+        
+        // 2. Replace single quotes with double quotes (only if no double quotes present)
+        if (!repaired.includes('"')) {
+            repaired = repaired.replace(/'/g, '"');
+        }
+
+        // 3. Fix unquoted keys (simple case: { key: } -> { "key": })
+        repaired = repaired.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+
+        try {
+            return JSON.parse(repaired);
+        } catch (e) {
+            return null;
+        }
     }
 
     // --- Extraction: Extract Canvas data from response ---
@@ -409,13 +462,17 @@
 
     // --- Main Process Method ---
     function process(response) {
+        console.log('[AICanvasAdapter] Starting process...', response);
+        
         // Check dependencies first
         const missingDeps = checkDependencies();
         if (missingDeps.length > 0) {
+            const errorMsg = `Missing dependencies: ${missingDeps.join(', ')}`;
+            console.error('[AICanvasAdapter] Dependency check failed:', errorMsg);
             return createResult(false, 'error', {
                 errors: [makeError(
                     ERROR_CODES.AI_RESPONSE_FAILED,
-                    `Missing dependencies: ${missingDeps.join(', ')}`
+                    errorMsg
                 )]
             });
         }
@@ -427,7 +484,7 @@
                 ERROR_CODES.AI_RESPONSE_FAILED,
                 'AI request failed'
             )];
-
+            console.error('[AICanvasAdapter] AI response failed:', errors);
             return createResult(false, 'error', {
                 content: null,
                 canvasProcessed: false,
@@ -440,16 +497,19 @@
         
         // Step 2: Check if response has content
         if (content === null || content === undefined) {
+            const errorMsg = 'Response missing content field';
+            console.error('[AICanvasAdapter]', errorMsg);
             return createResult(false, 'error', {
                 errors: [makeError(
                     ERROR_CODES.INVALID_CANVAS_DATA,
-                    'Response missing content field'
+                    errorMsg
                 )]
             });
         }
 
         // Step 3: Detect if this is a Canvas response
         if (!isCanvasResponse(response)) {
+            console.log('[AICanvasAdapter] Not a canvas response, treating as text');
             // Normal text response - return success without Canvas processing
             return createResult(true, 'text', {
                 content: typeof content === 'string' ? content : String(content),
@@ -458,9 +518,11 @@
         }
 
         // Step 4: Extract Canvas data
+        console.log('[AICanvasAdapter] Extracting canvas data...');
         const extractionResult = extractCanvasData(response);
         
         if (!extractionResult.success) {
+            console.error('[AICanvasAdapter] Extraction failed:', extractionResult.errors);
             return createResult(false, 'error', {
                 content: typeof content === 'string' ? content : null,
                 canvasProcessed: false,
@@ -469,10 +531,13 @@
             });
         }
 
+        console.log('[AICanvasAdapter] Extraction successful, validating schema...');
+
         // Step 5: Validate through AISchema
         const schemaResult = processSchema(extractionResult.data);
 
         if (!schemaResult.success) {
+            console.error('[AICanvasAdapter] Schema validation failed:', schemaResult.errors);
             return createResult(false, 'error', {
                 content: null,
                 canvasProcessed: false,
@@ -485,6 +550,8 @@
             });
         }
 
+        console.log('[AICanvasAdapter] Schema valid, executing actions...');
+
         // Step 6: Execute actions through AIActions
         const actionResult = processActions({
             success: true,
@@ -494,6 +561,7 @@
         });
 
         if (!actionResult.success) {
+            console.error('[AICanvasAdapter] Action execution failed:', actionResult.errors);
             return createResult(false, 'error', {
                 content: null,
                 canvasProcessed: true,
@@ -507,6 +575,8 @@
                 warnings: actionResult.warnings || []
             });
         }
+
+        console.log('[AICanvasAdapter] Success! Actions executed:', actionResult.actions?.length || 0);
 
         // Success: Canvas processed and actions executed
         return createResult(true, 'canvas', {
