@@ -35,6 +35,13 @@
                     <span class="ai-panel-title">AI Assistant</span>
                     <div class="ai-panel-header-actions">
                         <button id="ai-new-chat-btn" class="ai-new-chat-btn" aria-label="Start new chat">New Chat</button>
+                <div id="pipeline-error-panel" class="pipeline-error-panel" style="display:none;">
+                    <div class="pipeline-error-header">
+                        <span>Pipeline Errors</span>
+                        <button id="pipeline-error-close-btn" class="pipeline-error-close-btn">&times;</button>
+                    </div>
+                    <div id="pipeline-error-list" class="pipeline-error-list"></div>
+                </div>
                         <button id="ai-settings-btn" class="ai-settings-btn" aria-label="Open settings" title="Settings">&#9881;</button>
                     </div>
                 </div>
@@ -96,46 +103,48 @@
     <!-- 1. Storage must load first (used by canvas.js and canvas.engine.js) -->
     <script src="js/storage.js"></script>
     
-    <!-- 2. Canvas Layout Engine (independent, for future AI layout features) -->
+    <!-- 2. Error Reporter (must load before other AI modules for error tracking) -->
+    <script src="js/error.reporter.js"></script>
+    <!-- 3. Canvas Layout Engine (independent, for future AI layout features) -->
     <script src="js/canvas.layout.js"></script>
     
-    <!-- 3. AI Schema Module (data validation and normalization for future AI) -->
+    <!-- 4. AI Schema Module (data validation and normalization for future AI) -->
     <script src="js/ai.schema.js"></script>
     
-    <!-- 4. CanvasUI must load before canvas.js (provides styles and layoutHTML) -->
+    <!-- 5. CanvasUI must load before canvas.js (provides styles and layoutHTML) -->
     <script src="canvas/canvas.ui.js"></script>
     
     <!-- 4. CanvasEngine must load before canvas.js (provides math functions) -->
     <script src="canvas/canvas.engine.js"></script>
     
-    <!-- 5. Main canvas module loads last (depends on Storage, CanvasUI, CanvasEngine) -->
+    <!-- 7. Main canvas module loads last (depends on Storage, CanvasUI, CanvasEngine) -->
     <script src="canvas/canvas.js"></script>
     
-    <!-- 6. Canvas API layer for external module control (Stage 2+) -->
+    <!-- 8. Canvas API layer for external module control (Stage 2+) -->
     <script src="canvas/canvas.api.js"></script>
     
-    <!-- 7. AI Actions Module (converts validated plans to actions) -->
+    <!-- 9. AI Actions Module (converts validated plans to actions) -->
     <script src="js/ai.actions.js"></script>
     
-    <!-- 8. AI Settings Module (manages AI connection configuration) -->
+    <!-- 10. AI Settings Module (manages AI connection configuration) -->
     <script src="js/ai.settings.js"></script>
     
-    <!-- 9. AI Providers Module (registry of supported AI providers) -->
+    <!-- 11. AI Providers Module (registry of supported AI providers) -->
     <script src="js/ai.providers.js"></script>
     
-    <!-- 10. AI Client Module (communicates with AI providers) -->
+    <!-- 12. AI Client Module (communicates with AI providers) -->
     <script src="js/ai.client.js"></script>
 
-    <!-- 11. AI Canvas Adapter Module (connects AI responses to Canvas pipeline) -->
+    <!-- 13. AI Canvas Adapter Module (connects AI responses to Canvas pipeline) -->
     <script src="js/ai.canvas.adapter.js"></script>
 
-    <!-- 12. AI Context Module (prepares context for AI requests) -->
+    <!-- 14. AI Context Module (prepares context for AI requests) -->
     <script src="js/ai.context.js"></script>
 
-    <!-- 13. AI Conversation Module (orchestrates AI conversation requests) -->
+    <!-- 15. AI Conversation Module (orchestrates AI conversation requests) -->
     <script src="js/ai.conversation.js"></script>
 
-    <!-- 14. AI UI Module (user interface for AI chat interaction) -->
+    <!-- 16. AI UI Module (user interface for AI chat interaction) -->
     <script src="js/ai.ui.js"></script>
 
     <!-- Application initialization -->
