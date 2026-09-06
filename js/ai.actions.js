@@ -289,9 +289,10 @@ const AIActions = (function() {
      * Execute a single action through CanvasAPI
      * @param {Object} action - Action to execute
      * @param {Array} existingNodeIds - List of existing node IDs for reference validation
+     * @param {Array} newlyCreatedNodeIds - List of node IDs created in this batch
      * @returns {Object} Execution result
      */
-    function executeAction(action, existingNodeIds) {
+    function executeAction(action, existingNodeIds, newlyCreatedNodeIds = []) {
         if (!isCanvasAPIAvailable()) {
             return {
                 success: false,
@@ -299,15 +300,18 @@ const AIActions = (function() {
             };
         }
 
-        // For ADD_EDGE, verify referenced nodes exist
+        // Combine existing and newly created node IDs for validation
+        const allAvailableNodeIds = [...existingNodeIds, ...newlyCreatedNodeIds];
+
+        // For ADD_EDGE, verify referenced nodes exist (including newly created ones)
         if (action.type === 'ADD_EDGE') {
-            if (!nodeExists(action.payload.from, existingNodeIds)) {
+            if (!allAvailableNodeIds.includes(action.payload.from)) {
                 return {
                     success: false,
                     error: `Source node '${action.payload.from}' does not exist`
                 };
             }
-            if (!nodeExists(action.payload.to, existingNodeIds)) {
+            if (!allAvailableNodeIds.includes(action.payload.to)) {
                 return {
                     success: false,
                     error: `Target node '${action.payload.to}' does not exist`
@@ -355,6 +359,7 @@ const AIActions = (function() {
         const errors = [];
         const warnings = [];
         const executedActions = [];
+        const newlyCreatedNodeIds = []; // Track nodes created in this batch
 
         // Get current state to track existing nodes
         const currentState = CanvasAPI.getState();
@@ -389,8 +394,8 @@ const AIActions = (function() {
                 };
             }
 
-            // Execute the action
-            const execResult = executeAction(action, existingNodeIds);
+            // Execute the action - pass both existing and newly created node IDs
+            const execResult = executeAction(action, existingNodeIds, newlyCreatedNodeIds);
 
             const result = {
                 index: i,
@@ -420,9 +425,9 @@ const AIActions = (function() {
             executedActions.push(action);
             results.push(result);
 
-            // Update existing node IDs after successful ADD_NODE
+            // Track newly created node IDs for edge validation within same batch
             if (action.type === 'ADD_NODE' && action.payload.id) {
-                existingNodeIds.push(action.payload.id);
+                newlyCreatedNodeIds.push(action.payload.id);
             }
         }
 
