@@ -266,6 +266,8 @@
 
     // --- Handle Conversation Result ---
     function handleConversationResult(result) {
+        console.log('[AIUI] Handling conversation result:', result);
+        
         if (!result) {
             showStatus('Received empty response from AI', 'error');
             return;
@@ -273,8 +275,17 @@
 
         // Check for errors in result
         if (result.success === false) {
-            const errorMessage = getSafeErrorMessage(result.errors);
-            showStatus(errorMessage || 'AI request failed', 'error');
+            const errorDetails = getDetailedErrorInfo(result);
+            console.error('[AIUI] Conversation result error:', errorDetails);
+            
+            // Show detailed error message to user
+            const errorMessage = errorDetails.userMessage || 'AI request failed';
+            showStatus(errorMessage, 'error');
+            
+            // If there are technical details, also log them for debugging
+            if (errorDetails.techDetails && errorDetails.techDetails.length > 0) {
+                console.error('[AIUI] Technical details:', errorDetails.techDetails);
+            }
             return;
         }
 
@@ -284,7 +295,20 @@
         } else if (result.type === 'canvas' && result.canvasProcessed) {
             // Canvas action was performed - do NOT display JSON in chat
             // Instead, show a user-friendly message
-            addMessage('assistant', 'I have created the plan on the canvas.');
+            let successMessage = 'I have created the plan on the canvas.';
+            
+            // Include summary of what was created if data is available
+            if (result.data && result.data.nodes) {
+                const nodeCount = result.data.nodes.length;
+                const edgeCount = result.data.edges ? result.data.edges.length : 0;
+                successMessage = `I've created ${nodeCount} node${nodeCount !== 1 ? 's' : ''}`;
+                if (edgeCount > 0) {
+                    successMessage += ` and ${edgeCount} connection${edgeCount !== 1 ? 's' : ''}`;
+                }
+                successMessage += ' on the canvas.';
+            }
+            
+            addMessage('assistant', successMessage);
             
             // Show Canvas processing status
             showCanvasStatus();
@@ -303,6 +327,59 @@
                 showStatus(warningMessages, 'warning');
             }
         }
+    }
+
+    // --- Get Detailed Error Info ---
+    function getDetailedErrorInfo(result) {
+        const errorInfo = {
+            userMessage: 'An error occurred',
+            techDetails: []
+        };
+
+        if (!result.errors || !Array.isArray(result.errors)) {
+            return errorInfo;
+        }
+
+        const userMessages = [];
+        const techDetails = [];
+
+        for (const err of result.errors) {
+            const code = err.code || 'UNKNOWN_ERROR';
+            const message = err.message || 'Unknown error';
+            const details = err.details || {};
+
+            // Build user-friendly message based on error code
+            let userMsg = message;
+            
+            switch (code) {
+                case 'SCHEMA_VALIDATION_FAILED':
+                    userMsg = 'The AI response had invalid data format. Some nodes or connections could not be created.';
+                    break;
+                case 'ACTION_PROCESSING_FAILED':
+                    userMsg = 'Failed to update the canvas. Please try again.';
+                    break;
+                case 'AI_RESPONSE_FAILED':
+                    userMsg = 'The AI service did not respond correctly.';
+                    break;
+                case 'INVALID_CANVAS_DATA':
+                    userMsg = 'Could not understand the canvas data from the AI.';
+                    break;
+                case 'CANVAS_API_UNAVAILABLE':
+                    userMsg = 'Canvas system is not ready. Please refresh the page.';
+                    break;
+                default:
+                    // Keep original message for unknown errors
+                    break;
+            }
+
+            userMessages.push(userMsg);
+            techDetails.push(`${code}: ${message}`, details);
+        }
+
+        errorInfo.userMessage = userMessages.join(' ');
+        errorInfo.techDetails = techDetails;
+
+        return errorInfo;
     }
 
     // --- Handle Conversation Error ---
